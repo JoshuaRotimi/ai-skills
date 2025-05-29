@@ -1,0 +1,25 @@
+__pycache__/
+app/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.env.py
+.venv
+env/
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+*.log
+__pycache__/
+*.pyc
+
+.idea/
+
+# Python bytecode files
+__pycache__/
+*.py[cod]
