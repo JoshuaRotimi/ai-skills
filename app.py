@@ -216,6 +216,7 @@ def process_transfer(transfer_data):
             headers={"Content-Type": "application/json"},
             timeout=30
         )
+        print(response)
         return response
     except Exception as e:
         st.error(f"Transfer error: {str(e)}")
@@ -272,10 +273,8 @@ if selected_email and users_list:
                 <div class="user-details">
                     <h3>👤 {selected_user.get('name', 'Unknown User')}</h3>
                     <p>📧 {selected_user.get('email', 'No Email')}</p>
-                    <p>🆔 ID: {selected_user.get('id', 'No ID')}</p>
-                </div>
-                <div class="status-badge">
-                    KYC Status: {selected_user.get('kycStatus', 'Active')}
+                    <h5>KYC Status: {selected_user.get('kycStatus', '0')}</h5>
+                    <h5>Risk Level: {selected_user.get('riskLevel', 'Low')}</h5>
                 </div>
             </div>
         </div>
@@ -295,87 +294,163 @@ if st.session_state.show_transfer_modal:
     with st.form("transfer_form"):
         st.markdown("#### Transfer Details")
 
-        col1, col2 = st.columns(2)
+        transfer_amount = st.number_input(
+            "Amount",
+            min_value=0.01,
+            value=500.0,
+            step=10.0,
+            help="Enter the amount to transfer"
+        )
 
-        with col1:
-            transfer_amount = st.number_input(
-                "Amount",
-                min_value=0.01,
-                value=500.0,
-                step=10.0,
-                help="Enter the amount to transfer"
-            )
+        currency = st.selectbox(
+            "Currency",
+            options=["naira", "dollar", "euro", "pound"],
+            index=0,
+            help="Select the currency"
+        )
 
-            currency = st.selectbox(
-                "Currency",
-                options=["naira", "dollar", "euro", "pound"],
-                index=0,
-                help="Select the currency"
-            )
+        destination_account = st.text_input(
+            "Destination Account",
+            value="2098093020",
+            help="Enter the destination account number"
+        )
 
-        with col2:
-            destination_account = st.text_input(
-                "Destination Account",
-                value="2098093020",
-                help="Enter the destination account number"
-            )
+        country_code = st.selectbox(
+            "Country Code",
+            options=["NG", "US", "UK", "EU"],
+            index=0,
+            help="Select the country code"
+        )
 
-            country_code = st.selectbox(
-                "Country Code",
-                options=["NG", "US", "UK", "EU"],
-                index=0,
-                help="Select the country code"
-            )
+        if st.form_submit_button("✅ Process Transfer", use_container_width=True):
+            # Prepare transfer data
+            transfer_data = {
+                "email": selected_email,
+                "amount": transfer_amount,
+                "type": 0,
+                "currency": currency,
+                "countryCode": country_code,
+                "sourceAccount": "2345678902",
+                "destinationAccount": destination_account
+            }
 
-        col1, col2, col3 = st.columns([1, 1, 1])
+            # Process transfer
+            with st.spinner("Processing transfer..."):
+                response = process_transfer(transfer_data)
 
-        with col1:
-            if st.form_submit_button("✅ Process Transfer", use_container_width=True):
-                # Prepare transfer data
-                transfer_data = {
-                    "email": selected_email,
-                    "amount": transfer_amount,
-                    "type": 0,
-                    "currency": currency,
-                    "countryCode": country_code,
-                    "sourceAccount": "2345678902",
-                    "destinationAccount": destination_account
-                }
-
-                # Process transfer
-                with st.spinner("Processing transfer..."):
-                    response = process_transfer(transfer_data)
-
-                    if response and response.status_code == 200:
-                        try:
-                            response_data = response.json()
-                            print('Response', response_data)
-                            # Extract statusMessage from the response
-                            if "message" in response_data:
-                                status_message = response_data["message"]
-                                st.success(f"✅ {status_message}")
-                            else:
-                                st.success("✅ Transfer processed successfully!")
-                        except json.JSONDecodeError:
+                if response and response.status_code == 200:
+                    try:
+                        response_data = response.json()
+                        # Extract statusMessage from the response
+                        if "message" in response_data:
+                            status_message = response_data["message"]
+                            st.success(f"✅ {status_message}")
+                        else:
                             st.success("✅ Transfer processed successfully!")
+                    except json.JSONDecodeError:
+                        st.success("✅ Transfer processed successfully!")
 
-                        st.session_state.show_transfer_modal = False
-                    elif response:
-                        try:
-                            error_data = response.json()
-                            if "message" in error_data:
-                                st.error(f"❌ {error_data['message']}")
-                            else:
-                                st.error(f"❌ Transfer failed: {response.status_code} - {response.text}")
-                        except json.JSONDecodeError:
+                    st.session_state.show_transfer_modal = False
+                elif response:
+                    try:
+                        error_data = response.json()
+                        if "message" in error_data:
+                            st.error(f"❌ {error_data['message']}")
+                        else:
                             st.error(f"❌ Transfer failed: {response.status_code} - {response.text}")
-                    else:
-                        st.error("❌ Transfer failed due to connection error")
+                    except json.JSONDecodeError:
+                        st.error(f"❌ Transfer failed: {response.status_code} - {response.text}")
+                else:
+                    st.error("❌ Transfer failed due to connection error")
 
-        with col3:
-            if st.form_submit_button("❌ Cancel", use_container_width=True):
-                st.session_state.show_transfer_modal = False
-                st.rerun()
+# if st.session_state.show_transfer_modal:
+#     st.markdown("---")
+#     st.markdown("### 💸 Transfer Funds")
+#
+#     with st.form("transfer_form"):
+#         st.markdown("#### Transfer Details")
+#
+#         col1, col2 = st.columns(2)
+#
+#         with col1:
+#             transfer_amount = st.number_input(
+#                 "Amount",
+#                 min_value=0.01,
+#                 value=500.0,
+#                 step=10.0,
+#                 help="Enter the amount to transfer"
+#             )
+#
+#             currency = st.selectbox(
+#                 "Currency",
+#                 options=["naira", "dollar", "euro", "pound"],
+#                 index=0,
+#                 help="Select the currency"
+#             )
+#
+#         with col2:
+#             destination_account = st.text_input(
+#                 "Destination Account",
+#                 value="2098093020",
+#                 help="Enter the destination account number"
+#             )
+#
+#             country_code = st.selectbox(
+#                 "Country Code",
+#                 options=["NG", "US", "UK", "EU"],
+#                 index=0,
+#                 help="Select the country code"
+#             )
+#
+#         col1, col3 = st.columns([1, 1])
+#
+#         with col1:
+#             if st.form_submit_button("✅ Process Transfer", use_container_width=True):
+#                 # Prepare transfer data
+#                 transfer_data = {
+#                     "email": selected_email,
+#                     "amount": transfer_amount,
+#                     "type": 0,
+#                     "currency": currency,
+#                     "countryCode": country_code,
+#                     "sourceAccount": "2345678902",
+#                     "destinationAccount": destination_account
+#                 }
+#
+#                 # Process transfer
+#                 with st.spinner("Processing transfer..."):
+#                     response = process_transfer(transfer_data)
+#
+#                     if response and response.status_code == 200:
+#                         try:
+#                             response_data = response.json()
+#                             print('Response', response_data)
+#                             # Extract statusMessage from the response
+#                             if "message" in response_data:
+#                                 status_message = response_data["message"]
+#                                 st.success(f"✅ {status_message}")
+#                             else:
+#                                 st.success("✅ Transfer processed successfully!")
+#                         except json.JSONDecodeError:
+#                             st.success("✅ Transfer processed successfully!")
+#
+#                         st.session_state.show_transfer_modal = False
+#                     elif response:
+#                         try:
+#                             error_data = response.json()
+#                             if "message" in error_data:
+#                                 st.error(f"❌ {error_data['message']}")
+#                             else:
+#                                 st.error(f"❌ Transfer failed: {response.status_code} - {response.text}")
+#                         except json.JSONDecodeError:
+#                             st.error(f"❌ Transfer failed: {response.status_code} - {response.text}")
+#                     else:
+#                         st.error("❌ Transfer failed due to connection error")
+#
+#         with col3:
+#             if st.form_submit_button("Cancel", use_container_width=True):
+#                 st.session_state.show_transfer_modal = False
+#                 st.rerun()
 
 # Chat Section
 if not st.session_state.show_transfer_modal:
